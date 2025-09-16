@@ -41,6 +41,24 @@ curl -fsSL https://raw.githubusercontent.com/ltt251292/kube-cmd/main/install.sh 
 curl -fsSL https://raw.githubusercontent.com/ltt251292/kube-cmd/main/install.sh | bash -s -- --uninstall
 ```
 
+### 🌍 Environment Variables
+
+Bạn có thể override các settings bằng environment variables:
+
+```bash
+# Cài đặt vào thư mục khác
+KUBE_INSTALL_DIR=~/bin curl -fsSL https://raw.githubusercontent.com/ltt251292/kube-cmd/main/install.sh | bash
+
+# Chỉ build, chế độ quiet
+KUBE_BUILD_ONLY=true KUBE_QUIET=true curl -fsSL https://raw.githubusercontent.com/ltt251292/kube-cmd/main/install.sh | bash
+
+# Sử dụng repo fork khác
+KUBE_REPO_URL=https://github.com/your-fork/kube-cmd.git KUBE_BRANCH=develop curl -fsSL ... | bash
+
+# Force override files đã tồn tại
+KUBE_FORCE=true curl -fsSL https://raw.githubusercontent.com/ltt251292/kube-cmd/main/install.sh | bash
+```
+
 ### 🛠️ Build từ source (Developers)
 
 ```bash
@@ -182,7 +200,7 @@ kube-pods -c my-context -n my-namespace
 # Xem tất cả options
 curl -fsSL https://raw.githubusercontent.com/ltt251292/kube-cmd/main/install.sh | bash -s -- --help
 
-# Các options khả dụng:
+# Command line options:
 --dir DIR          # Thư mục cài đặt (default: /usr/local/bin)
 --build-only       # Chỉ build, không cài đặt  
 --force            # Ghi đè files đã tồn tại
@@ -190,6 +208,14 @@ curl -fsSL https://raw.githubusercontent.com/ltt251292/kube-cmd/main/install.sh 
 --uninstall        # Gỡ bỏ tất cả tools
 --repo URL         # Custom repository URL
 --branch BRANCH    # Git branch (default: main)
+
+# Environment variables (override command options):
+KUBE_INSTALL_DIR   # Thư mục cài đặt
+KUBE_BUILD_ONLY    # true/false - Chỉ build
+KUBE_FORCE         # true/false - Ghi đè files
+KUBE_QUIET         # true/false - Chế độ quiet
+KUBE_REPO_URL      # Repository URL
+KUBE_BRANCH        # Git branch
 ```
 
 ### 🗑️ Gỡ bỏ (Uninstall)

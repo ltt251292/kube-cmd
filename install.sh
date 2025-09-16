@@ -13,13 +13,13 @@ YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
-# Default values
-INSTALL_DIR="/usr/local/bin"
-BUILD_ONLY=false
-FORCE=false
-QUIET=false
-REPO_URL="https://github.com/ltt251292/kube-cmd.git"  # TODO: Update với actual repo URL
-BRANCH="main"
+# Default values (có thể override bằng environment variables)
+INSTALL_DIR="${KUBE_INSTALL_DIR:-/usr/local/bin}"
+BUILD_ONLY="${KUBE_BUILD_ONLY:-false}"
+FORCE="${KUBE_FORCE:-false}"
+QUIET="${KUBE_QUIET:-false}"
+REPO_URL="${KUBE_REPO_URL:-https://github.com/ltt251292/kube-cmd.git}"
+BRANCH="${KUBE_BRANCH:-main}"
 TEMP_DIR=""
 CLEANUP_TEMP=false
 
@@ -43,9 +43,21 @@ show_help() {
     echo "  --repo URL          GitHub repository URL (default: $REPO_URL)"
     echo "  --branch BRANCH     Git branch để clone (default: $BRANCH)"
     echo ""
+    echo "Environment Variables:"
+    echo "  KUBE_INSTALL_DIR    Thư mục cài đặt (override --dir)"
+    echo "  KUBE_BUILD_ONLY     Chỉ build: true/false (override --build-only)"
+    echo "  KUBE_FORCE          Ghi đè files: true/false (override --force)"
+    echo "  KUBE_QUIET          Chế độ quiet: true/false (override --quiet)"
+    echo "  KUBE_REPO_URL       Repository URL (override --repo)"
+    echo "  KUBE_BRANCH         Git branch (override --branch)"
+    echo ""
     echo "Examples:"
     echo "  # Cài đặt từ internet (khuyến nghị)"
     echo "  curl -fsSL https://raw.githubusercontent.com/ltt251292/kube-cmd/main/install.sh | bash"
+    echo ""
+    echo "  # Với environment variables"
+    echo "  KUBE_INSTALL_DIR=~/bin curl -fsSL ... | bash"
+    echo "  KUBE_BUILD_ONLY=true KUBE_QUIET=true curl -fsSL ... | bash"
     echo ""
     echo "  # Cài đặt local"
     echo "  $SCRIPT_NAME                    # Cài đặt tất cả tools"
@@ -265,6 +277,25 @@ verify_installation() {
 main() {
     local uninstall=false
     local need_clone=true
+    
+    # Convert environment variables từ string thành boolean
+    if [[ "$BUILD_ONLY" == "true" ]] || [[ "$BUILD_ONLY" == "1" ]]; then
+        BUILD_ONLY=true
+    else
+        BUILD_ONLY=false
+    fi
+    
+    if [[ "$FORCE" == "true" ]] || [[ "$FORCE" == "1" ]]; then
+        FORCE=true
+    else
+        FORCE=false
+    fi
+    
+    if [[ "$QUIET" == "true" ]] || [[ "$QUIET" == "1" ]]; then
+        QUIET=true
+    else
+        QUIET=false
+    fi
     
     # Kiểm tra xem đã ở trong repo chưa
     if [[ -f "go.mod" ]] && [[ -f "Makefile" ]] && [[ -d "tools" ]]; then
