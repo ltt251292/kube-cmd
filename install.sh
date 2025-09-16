@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # install.sh - Script cài đặt Kube Tools từ GitHub
-# Usage: curl -fsSL https://raw.githubusercontent.com/USERNAME/REPO/main/install.sh | bash
+# Usage: curl -fsSL https://raw.githubusercontent.com/ltt251292/kube-cmd/main/install.sh | bash
 # hoặc: ./install.sh [options]
 
 set -euo pipefail
@@ -18,7 +18,7 @@ INSTALL_DIR="/usr/local/bin"
 BUILD_ONLY=false
 FORCE=false
 QUIET=false
-REPO_URL="https://github.com/USERNAME/REPO.git"  # TODO: Update với actual repo URL
+REPO_URL="https://github.com/ltt251292/kube-cmd.git"  # TODO: Update với actual repo URL
 BRANCH="main"
 TEMP_DIR=""
 CLEANUP_TEMP=false
@@ -45,7 +45,7 @@ show_help() {
     echo ""
     echo "Examples:"
     echo "  # Cài đặt từ internet (khuyến nghị)"
-    echo "  curl -fsSL https://raw.githubusercontent.com/USERNAME/REPO/main/install.sh | bash"
+    echo "  curl -fsSL https://raw.githubusercontent.com/ltt251292/kube-cmd/main/install.sh | bash"
     echo ""
     echo "  # Cài đặt local"
     echo "  $SCRIPT_NAME                    # Cài đặt tất cả tools"
