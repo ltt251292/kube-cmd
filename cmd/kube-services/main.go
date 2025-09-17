@@ -3,10 +3,11 @@ package main
 import (
 	"fmt"
 	"os"
-	"text/tabwriter"
+	"regexp"
+	"strings"
 
-	"kube/pkg/k8s"
-	"kube/pkg/utils"
+	"kube/pkg/kubernetes/k8s"
+	"kube/pkg/shared/utils"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -19,17 +20,15 @@ var (
 	servicesAllNamespaces bool
 )
 
-// servicesRootCmd đại diện cho kube-services command
+// servicesRootCmd represents the kube-services command
 var servicesRootCmd = &cobra.Command{
 	Use:   "kube-services",
-	Short: "Hiển thị danh sách services",
-	Long: `kube-services là một tool để xem danh sách services trong Kubernetes cluster.
-	
-Tương đương với kubectl get services nhưng với format đẹp hơn và các tùy chọn thuận tiện.`,
-	RunE: runServices,
+	Short: "List services",
+	Long:  `kube-services lists services in your Kubernetes cluster with a clean table output.`,
+	RunE:  runServices,
 }
 
-// runServices thực thi logic lấy danh sách services
+// runServices executes the logic to list services
 func runServices(cmd *cobra.Command, args []string) error {
 	client, err := k8s.NewClient("", servicesContext)
 	if err != nil {
@@ -38,10 +37,15 @@ func runServices(cmd *cobra.Command, args []string) error {
 
 	targetNamespace := servicesNamespace
 	if targetNamespace == "" {
-		targetNamespace = "default"
+		// Get current namespace from kubeconfig if no --namespace flag
+		ns, err := k8s.GetCurrentNamespace(servicesContext)
+		if err != nil {
+			return fmt.Errorf("failed to get current namespace: %w", err)
+		}
+		targetNamespace = ns
 	}
 
-	// Nếu --all-namespaces, lấy từ tất cả namespaces
+	// If --all-namespaces, get from all namespaces
 	if servicesAllNamespaces {
 		targetNamespace = ""
 	}
@@ -51,15 +55,15 @@ func runServices(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to list services: %w", err)
 	}
 
-	// Hiển thị kết quả dạng bảng
-	w := tabwriter.NewWriter(os.Stdout, 0, 0, 3, ' ', 0)
-
+	// Prepare table data
+	var headers []string
 	if servicesAllNamespaces {
-		fmt.Fprintln(w, "NAMESPACE\tNAME\tTYPE\tCLUSTER-IP\tEXTERNAL-IP\tPORT(S)\tAGE")
+		headers = []string{"NAMESPACE", "NAME", "TYPE", "CLUSTER-IP", "EXTERNAL-IP", "PORT(S)", "AGE"}
 	} else {
-		fmt.Fprintln(w, "NAME\tTYPE\tCLUSTER-IP\tEXTERNAL-IP\tPORT(S)\tAGE")
+		headers = []string{"NAME", "TYPE", "CLUSTER-IP", "EXTERNAL-IP", "PORT(S)", "AGE"}
 	}
 
+	var rows [][]string
 	for _, svc := range services.Items {
 		externalIP := "<none>"
 		if len(svc.Status.LoadBalancer.Ingress) > 0 {
@@ -85,44 +89,112 @@ func runServices(cmd *cobra.Command, args []string) error {
 		age := metav1.Now().Time.Sub(svc.CreationTimestamp.Time)
 
 		if servicesAllNamespaces {
-			fmt.Fprintf(w, "%s\t%s\t%s\t%s\t%s\t%s\t%s\n",
+			rows = append(rows, []string{
 				svc.Namespace,
 				svc.Name,
-				svc.Spec.Type,
+				string(svc.Spec.Type),
 				svc.Spec.ClusterIP,
 				externalIP,
 				ports,
 				utils.FormatAge(age),
-			)
+			})
 		} else {
-			fmt.Fprintf(w, "%s\t%s\t%s\t%s\t%s\t%s\n",
+			rows = append(rows, []string{
 				svc.Name,
-				svc.Spec.Type,
+				string(svc.Spec.Type),
 				svc.Spec.ClusterIP,
 				externalIP,
 				ports,
 				utils.FormatAge(age),
-			)
+			})
 		}
 	}
 
-	w.Flush()
+	renderTable(headers, rows)
 	return nil
 }
 
-// init khởi tạo cấu hình cho kube-services command
+// init initializes flags for kube-services command
 func init() {
-	// Định nghĩa flags
+	// Define flags
 	servicesRootCmd.Flags().StringVarP(&servicesNamespace, "namespace", "n", "", "Kubernetes namespace to use")
 	servicesRootCmd.Flags().StringVarP(&servicesContext, "context", "c", "", "Kubernetes context to use")
-	servicesRootCmd.Flags().BoolVarP(&servicesAllNamespaces, "all-namespaces", "A", false, "Hiển thị services từ tất cả namespaces")
+	servicesRootCmd.Flags().BoolVarP(&servicesAllNamespaces, "all-namespaces", "A", false, "Show services from all namespaces")
 
-	// Bind flags với viper
+	// Bind flags with viper
 	viper.BindPFlag("namespace", servicesRootCmd.Flags().Lookup("namespace"))
 	viper.BindPFlag("context", servicesRootCmd.Flags().Lookup("context"))
 }
 
-// main là entry point của kube-services
+// renderTable prints an ASCII table with simple borders
+// headers: column headers, rows: row data
+func renderTable(headers []string, rows [][]string) {
+	widths := make([]int, len(headers))
+	// Calculate width based on content (excluding ANSI color codes if any)
+	for c, h := range headers {
+		w := displayWidth(h)
+		if w > widths[c] {
+			widths[c] = w
+		}
+	}
+	for _, row := range rows {
+		for c, cell := range row {
+			w := displayWidth(cell)
+			if w > widths[c] {
+				widths[c] = w
+			}
+		}
+	}
+
+	printSeparator(widths)
+	fmt.Println("| " + joinRow(headers, widths) + " |")
+	printSeparator(widths)
+	for _, row := range rows {
+		fmt.Println("| " + joinRow(row, widths) + " |")
+	}
+	printSeparator(widths)
+}
+
+// displayWidth returns display length (excluding ANSI codes)
+func displayWidth(s string) int {
+	return len(stripANSI(s))
+}
+
+// stripANSI removes ANSI color codes for accurate width calculation
+func stripANSI(s string) string {
+	ansi := regexp.MustCompile("\\x1b\\[[0-9;]*m")
+	return ansi.ReplaceAllString(s, "")
+}
+
+// joinRow left-aligns each cell and joins with column separator
+func joinRow(cols []string, widths []int) string {
+	parts := make([]string, len(cols))
+	for i, col := range cols {
+		pad := widths[i] - displayWidth(col)
+		if pad < 0 {
+			pad = 0
+		}
+		parts[i] = col + strings.Repeat(" ", pad)
+	}
+	return strings.Join(parts, " | ")
+}
+
+// printSeparator prints border line based on column widths
+func printSeparator(widths []int) {
+	b := strings.Builder{}
+	b.WriteString("+")
+	for i, w := range widths {
+		b.WriteString(strings.Repeat("-", w+2))
+		if i == len(widths)-1 {
+			b.WriteString("+")
+		} else {
+			b.WriteString("+")
+		}
+	}
+	fmt.Println(b.String())
+}
+
+// main is the entry point of kube-services
 func main() {
 	if err := servicesRootCmd.Execute(); err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)

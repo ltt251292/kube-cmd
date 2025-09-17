@@ -1,142 +1,144 @@
 # Kube Tools
 
-Một collection các command line tools được viết bằng Go để làm việc với Kubernetes cluster một cách thuận tiện và hiệu quả hơn.
+A collection of command-line tools written in Go to work with Kubernetes clusters conveniently and efficiently.
 
-Thay vì một tool đơn lẻ, kube cung cấp nhiều tools chuyên biệt theo format `kube-*` giống như kubectl plugins.
+Instead of a single tool, kube provides multiple specialized tools in the `kube-*` format, similar to kubectl plugins.
 
-## Các Tools
+## Tools
 
-- 🚀 **kube-pods**: Xem danh sách pods với format đẹp
-- 🔧 **kube-services**: Xem danh sách services
-- 🔄 **kube-switch-context**: Chuyển đổi nhanh giữa các contexts
-- 📁 **kube-switch-namespace**: Chuyển đổi namespace trong context hiện tại
-- 📋 **kube-logs**: Xem logs real-time với nhiều tùy chọn
-- 🔌 **kube-port-forward**: Forward ports từ local đến pods
-- 💻 **kube-exec**: Thực thi commands trong containers
+- 🚀 **kube-pods**: List pods with clean output (colored status, IP, node, image versions)
+- 🔧 **kube-services**: List services
+- 🔄 **kube-switch-context**: Quickly switch between kube contexts
+- 📁 **kube-switch-namespace**: Switch namespace in current context
+- 📋 **kube-logs**: Tail logs with multiple options
+- 🔌 **kube-port-forward**: Port-forward to pods or services
+- 💻 **kube-exec**: Execute commands inside containers
+- 📦 **kube-deploy**: Update Deployment image and wait for rollout (or list deployments)
+- 🔁 **kube-rollout**: Restart or show rollout status of a Deployment
 
-## Cài đặt
+## Installation
 
-### 🚀 Cài đặt nhanh từ internet (Khuyến nghị)
+### 🚀 Quick install from Internet (Recommended)
 
 ```bash
-# Cài đặt một lệnh duy nhất
+# Single command install
 curl -fsSL https://raw.githubusercontent.com/ltt251292/kube-cmd/main/install.sh | bash
 
-# Hoặc download script và chạy
+# Or download the script and run
 wget https://raw.githubusercontent.com/ltt251292/kube-cmd/main/install.sh
 chmod +x install.sh
 ./install.sh
 ```
 
-### ⚙️ Tùy chọn cài đặt
+### ⚙️ Installation options
 
 ```bash
-# Cài đặt vào thư mục khác
+# Install to a different directory
 curl -fsSL https://raw.githubusercontent.com/ltt251292/kube-cmd/main/install.sh | bash -s -- --dir ~/bin
 
-# Chỉ build, không cài đặt
+# Build only, do not install
 curl -fsSL https://raw.githubusercontent.com/ltt251292/kube-cmd/main/install.sh | bash -s -- --build-only
 
-# Gỡ bỏ tất cả tools
+# Uninstall all tools
 curl -fsSL https://raw.githubusercontent.com/ltt251292/kube-cmd/main/install.sh | bash -s -- --uninstall
 ```
 
 ### 🌍 Environment Variables
 
-Bạn có thể override các settings bằng environment variables:
+You can override settings via environment variables:
 
 ```bash
-# Cài đặt vào thư mục khác
+# Install to a different directory
 KUBE_INSTALL_DIR=~/bin curl -fsSL https://raw.githubusercontent.com/ltt251292/kube-cmd/main/install.sh | bash
 
-# Chỉ build, chế độ quiet
+# Build only, quiet mode
 KUBE_BUILD_ONLY=true KUBE_QUIET=true curl -fsSL https://raw.githubusercontent.com/ltt251292/kube-cmd/main/install.sh | bash
 
-# Sử dụng repo fork khác
+# Use a different fork
 KUBE_REPO_URL=https://github.com/your-fork/kube-cmd.git KUBE_BRANCH=develop curl -fsSL ... | bash
 
-# Force override files đã tồn tại
+# Force overwrite existing files
 KUBE_FORCE=true curl -fsSL https://raw.githubusercontent.com/ltt251292/kube-cmd/main/install.sh | bash
 ```
 
-### 🛠️ Build từ source (Developers)
+### 🛠️ Build from source (Developers)
 
 ```bash
 git clone https://github.com/ltt251292/kube-cmd.git
 cd kube
 
-# Cài đặt tự động
+# Automated install
 ./install.sh
 
-# Hoặc build thủ công
+# Or build manually
 make build-all
 sudo make install-all
 ```
 
-### Yêu cầu
+### Requirements
 
-**Để sử dụng:**
-- Kubectl đã được cấu hình  
-- Quyền truy cập vào Kubernetes cluster
+**To use:**
+- Kubectl configured
+- Access to a Kubernetes cluster
 
-**Để build từ source:**
+**To build from source:**
 - Go 1.21+
 - Git
 - Make
 
-## Sử dụng
+## Usage
 
-### Xem danh sách tools
+### Show tools
 
 ```bash
-# Xem tất cả tools có sẵn
+# Show all available tools
 kube
 ```
 
-### Xem resources
+### View resources
 
 ```bash
-# Xem pods
+# List pods
 kube-pods
-kube-pods -A  # Tất cả namespaces
+kube-pods -A  # All namespaces
 
-# Xem services
+# List services
 kube-services
 kube-services -n my-namespace
 ```
 
-### Chuyển đổi context và namespace
+### Switch context and namespace
 
 ```bash
-# Xem danh sách contexts
+# List contexts
 kube-switch-context
 
-# Chuyển sang context khác
+# Switch to another context
 kube-switch-context my-context
 
-# Xem namespace hiện tại
+# Show current namespace
 kube-switch-namespace
 
-# Chuyển sang namespace khác
+# Switch to another namespace
 kube-switch-namespace my-namespace
 ```
 
-### Xem logs
+### Logs
 
 ```bash
-# Xem logs của pod
+# Show pod logs
 kube-logs my-pod
 
 # Follow logs real-time
 kube-logs my-pod -f
 
-# Xem 100 dòng cuối
+# Show last 100 lines
 kube-logs my-pod -t 100
 
-# Xem logs của container cụ thể
+# Logs of specific container
 kube-logs my-pod --container container-name
 
-# Xem logs với timestamps
+# Include timestamps in output
 kube-logs my-pod --timestamps
 ```
 
@@ -146,49 +148,49 @@ kube-logs my-pod --timestamps
 # Forward port 8080 local -> 80 remote
 kube-port-forward my-pod 8080:80
 
-# Forward cùng port (3000 -> 3000)
+# Forward same port (3000 -> 3000)
 kube-port-forward my-pod 3000
 ```
 
-### Thực thi commands
+### Exec into Pods
 
 ```bash
-# Mở bash shell
+# Open bash shell
 kube-exec my-pod -- bash
 
-# Thực thi command cụ thể
+# Execute specific command
 kube-exec my-pod -- ls -la /app
 
-# Exec vào container cụ thể
+# Exec into a specific container
 kube-exec my-pod --container container-name -- env
 ```
 
-### Sử dụng với flags global
+### Using global flags
 
 ```bash
-# Chỉ định namespace
+# Specify namespace
 kube-pods -n kube-system
 
-# Chỉ định context
+# Specify context
 kube-pods -c my-context
 
-# Kết hợp cả hai
+# Combine both
 kube-pods -n kube-system -c my-context
 ```
 
 ## Configuration
 
-Tool sử dụng kubeconfig mặc định từ `~/.kube/config`. Bạn có thể:
+Tools use kubeconfig from `~/.kube/config` by default. You can:
 
-1. Sử dụng biến môi trường `KUBECONFIG`
-2. Chỉ định context và namespace với flags `-c` và `-n`
+1. Use `KUBECONFIG` environment variable
+2. Specify context and namespace with flags `-c` and `-n`
 
 ```bash
-# Set biến môi trường KUBECONFIG
+# Set KUBECONFIG environment variable
 export KUBECONFIG=/path/to/kubeconfig
 kube-pods
 
-# Hoặc sử dụng flags
+# Or use flags
 kube-pods -c my-context -n my-namespace
 ```
 
@@ -197,90 +199,90 @@ kube-pods -c my-context -n my-namespace
 ### 📋 Script Options
 
 ```bash
-# Xem tất cả options
+# Show all options
 curl -fsSL https://raw.githubusercontent.com/ltt251292/kube-cmd/main/install.sh | bash -s -- --help
 
 # Command line options:
---dir DIR          # Thư mục cài đặt (default: /usr/local/bin)
---build-only       # Chỉ build, không cài đặt  
---force            # Ghi đè files đã tồn tại
---quiet            # Chế độ quiet (ít output)
---uninstall        # Gỡ bỏ tất cả tools
+--dir DIR          # Install directory (default: /usr/local/bin)
+--build-only       # Build only, do not install  
+--force            # Overwrite existing files
+--quiet            # Quiet mode
+--uninstall        # Uninstall all tools
 --repo URL         # Custom repository URL
 --branch BRANCH    # Git branch (default: main)
 
 # Environment variables (override command options):
-KUBE_INSTALL_DIR   # Thư mục cài đặt
-KUBE_BUILD_ONLY    # true/false - Chỉ build
-KUBE_FORCE         # true/false - Ghi đè files
-KUBE_QUIET         # true/false - Chế độ quiet
+KUBE_INSTALL_DIR   # Install directory
+KUBE_BUILD_ONLY    # true/false - Build only
+KUBE_FORCE         # true/false - Overwrite files
+KUBE_QUIET         # true/false - Quiet mode
 KUBE_REPO_URL      # Repository URL
 KUBE_BRANCH        # Git branch
 ```
 
-### 🗑️ Gỡ bỏ (Uninstall)
+### 🗑️ Uninstall
 
 ```bash
-# Gỡ bỏ tất cả tools
+# Remove all tools
 curl -fsSL https://raw.githubusercontent.com/ltt251292/kube-cmd/main/install.sh | bash -s -- --uninstall
 
-# Hoặc nếu đã có script local
+# Or if you already have the script locally
 ./install.sh --uninstall
 
-# Hoặc dùng Makefile
+# Or use Makefile
 sudo make uninstall-all
 ```
 
-## Danh sách Tools
+## Tool List
 
-| Tool | Mô tả | Flags chính |
+| Tool | Description | Main Flags |
 |------|-------|-----------|
-| `kube-pods` | Xem pods | `-A`, `-n`, `-c` |
-| `kube-services` | Xem services | `-A`, `-n`, `-c` |
-| `kube-switch-context` | Chuyển context | - |
-| `kube-switch-namespace` | Chuyển namespace | - |
-| `kube-logs` | Xem logs | `-f`, `-t`, `--container` |
+| `kube-pods` | List pods | `-A`, `-n`, `-c` |
+| `kube-services` | List services | `-A`, `-n`, `-c` |
+| `kube-switch-context` | Switch context | - |
+| `kube-switch-namespace` | Switch namespace | - |
+| `kube-logs` | Show logs | `-f`, `-t`, `--container` |
 | `kube-port-forward` | Port forwarding | `-n`, `-c` |
-| `kube-exec` | Exec vào pod | `--container`, `-t`, `-i` |
+| `kube-exec` | Exec into pod | `--container`, `-t`, `-i` |
 
-## Ví dụ workflow thường dùng
+## Common workflows
 
-### 1. Khởi tạo và explore cluster
+### 1. Initialize and explore the cluster
 
 ```bash
-# Xem contexts có sẵn
+# List available contexts
 kube-switch-context
 
-# Chuyển sang context cần thiết
+# Switch to desired context
 kube-switch-context production
 
-# Chuyển sang namespace
+# Switch namespace
 kube-switch-namespace my-app
 
-# Xem pods
+# List pods
 kube-pods
 ```
 
-### 2. Debug ứng dụng
+### 2. Debug applications
 
 ```bash
-# Xem pods có vấn đề
+# List problematic pods
 kube-pods
 
-# Xem logs realtime
+# Tail logs
 kube-logs problematic-pod -f
 
-# Exec vào pod để debug
+# Exec into pod for debugging
 kube-exec problematic-pod -- bash
 
-# Port forward để test local
+# Port forward to test locally
 kube-port-forward my-app-pod 8080:80
 ```
 
 ### 3. Monitoring
 
 ```bash
-# Xem tất cả resources
+# View all resources
 kube-pods -A
 kube-services -A
 
@@ -288,9 +290,9 @@ kube-services -A
 kube-logs app-pod -f --timestamps
 ```
 
-## Góp ý và Issues
+## Feedback and Issues
 
-Nếu bạn gặp lỗi hoặc có ý tưởng cải thiện, hãy tạo issue hoặc pull request.
+If you find bugs or have improvement ideas, please open an issue or pull request.
 
 ## License
 

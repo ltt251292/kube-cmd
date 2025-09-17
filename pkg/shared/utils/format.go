@@ -5,8 +5,8 @@ import (
 	"time"
 )
 
-// FormatAge chuyển đổi duration thành format age giống kubectl
-// Ví dụ: 5m, 1h, 2d
+// FormatAge converts duration to kubectl-like age format
+// Examples: 5m, 1h, 2d
 func FormatAge(d time.Duration) string {
 	if d < time.Minute {
 		return fmt.Sprintf("%ds", int(d.Seconds()))
@@ -20,8 +20,8 @@ func FormatAge(d time.Duration) string {
 	return fmt.Sprintf("%dd", int(d.Hours()/24))
 }
 
-// FormatBytes chuyển đổi bytes thành định dạng human-readable
-// Ví dụ: 1024 -> 1Ki, 1048576 -> 1Mi
+// FormatBytes converts bytes to human-readable format
+// Examples: 1024 -> 1Ki, 1048576 -> 1Mi
 func FormatBytes(bytes int64) string {
 	const unit = 1024
 	if bytes < unit {
@@ -35,8 +35,8 @@ func FormatBytes(bytes int64) string {
 	return fmt.Sprintf("%.1f%ci", float64(bytes)/float64(div), "KMGTPE"[exp])
 }
 
-// FormatCPU chuyển đổi CPU millicores thành format readable
-// Ví dụ: 1000 -> 1, 500 -> 500m
+// FormatCPU converts CPU millicores to readable format
+// Examples: 1000 -> 1, 500 -> 500m
 func FormatCPU(millicores int64) string {
 	if millicores >= 1000 {
 		return fmt.Sprintf("%d", millicores/1000)
@@ -44,8 +44,8 @@ func FormatCPU(millicores int64) string {
 	return fmt.Sprintf("%dm", millicores)
 }
 
-// TruncateString cắt ngắn string nếu dài hơn maxLength
-// Thêm "..." nếu string bị cắt
+// TruncateString truncates string if longer than maxLength
+// Adds "..." if string is truncated
 func TruncateString(s string, maxLength int) string {
 	if len(s) <= maxLength {
 		return s

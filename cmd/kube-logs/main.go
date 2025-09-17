@@ -8,7 +8,7 @@ import (
 	"os"
 	"strings"
 
-	"kube/pkg/k8s"
+	"kube/pkg/kubernetes/k8s"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -26,28 +26,28 @@ var (
 	logsTimestamps    bool
 )
 
-// logsRootCmd đại diện cho kube-logs command
+// logsRootCmd represents the kube-logs command
 var logsRootCmd = &cobra.Command{
 	Use:   "kube-logs [pod-name]",
-	Short: "Hiển thị logs của pod",
-	Long: `kube-logs hiển thị logs của một pod cụ thể.
-	
-Tính năng:
-- Follow logs real-time (-f)
-- Hiển thị số dòng cuối (-t, --tail)
-- Hiển thị logs từ timestamp cụ thể (--since)
-- Chọn container cụ thể (-c, --container)
-- Timestamps trong output (--timestamps)
+	Short: "Show pod logs",
+	Long: `kube-logs shows logs for a specific pod.
 
-Ví dụ:
-  kube-logs my-pod                       # Xem logs của pod
-  kube-logs my-pod -f                    # Follow logs real-time
-  kube-logs my-pod -c container-name     # Logs của container cụ thể`,
+Features:
+- Follow logs in real-time (-f)
+- Show last N lines (-t, --tail)
+- Show logs since seconds ago (--since)
+- Select a specific container (-c, --container)
+- Include timestamps (--timestamps)
+
+Examples:
+  kube-logs my-pod                       # Show logs of a pod
+  kube-logs my-pod -f                    # Follow logs in real-time
+  kube-logs my-pod -c container-name     # Logs for a specific container`,
 	Args: cobra.ExactArgs(1),
 	RunE: runLogs,
 }
 
-// runLogs thực thi logic hiển thị logs
+// runLogs executes the logic to display logs
 func runLogs(cmd *cobra.Command, args []string) error {
 	podName := args[0]
 
@@ -58,16 +58,21 @@ func runLogs(cmd *cobra.Command, args []string) error {
 
 	targetNamespace := logsNamespace
 	if targetNamespace == "" {
-		targetNamespace = "default"
+		// Get current namespace from kubeconfig if no --namespace flag
+		ns, err := k8s.GetCurrentNamespace(logsKubeContext)
+		if err != nil {
+			return fmt.Errorf("failed to get current namespace: %w", err)
+		}
+		targetNamespace = ns
 	}
 
-	// Lấy thông tin pod để kiểm tra containers
+	// Get pod information to check containers
 	pod, err := client.Clientset.CoreV1().Pods(targetNamespace).Get(context.Background(), podName, metav1.GetOptions{})
 	if err != nil {
 		return fmt.Errorf("failed to get pod %s: %w", podName, err)
 	}
 
-	// Nếu không chỉ định container và pod có nhiều containers
+	// If no container is specified and pod has multiple containers
 	if logsContainerName == "" && len(pod.Spec.Containers) > 1 {
 		fmt.Println("Pod has multiple containers:")
 		for i, container := range pod.Spec.Containers {
@@ -76,12 +81,12 @@ func runLogs(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("please specify container with -c flag")
 	}
 
-	// Sử dụng container đầu tiên nếu không chỉ định
+	// Use first container if not specified
 	if logsContainerName == "" {
 		logsContainerName = pod.Spec.Containers[0].Name
 	}
 
-	// Thiết lập options cho logs
+	// Set up options for logs
 	logOptions := &corev1.PodLogOptions{
 		Container:  logsContainerName,
 		Follow:     logsFollow,
@@ -96,7 +101,7 @@ func runLogs(cmd *cobra.Command, args []string) error {
 		logOptions.SinceSeconds = &logsSinceSeconds
 	}
 
-	// Lấy logs stream
+	// Get logs stream
 	req := client.Clientset.CoreV1().Pods(targetNamespace).GetLogs(podName, logOptions)
 	stream, err := req.Stream(context.Background())
 	if err != nil {
@@ -104,7 +109,7 @@ func runLogs(cmd *cobra.Command, args []string) error {
 	}
 	defer stream.Close()
 
-	// Đọc và hiển thị logs
+	// Read and display logs
 	reader := bufio.NewReader(stream)
 	for {
 		line, err := reader.ReadString('\n')
@@ -115,7 +120,7 @@ func runLogs(cmd *cobra.Command, args []string) error {
 			return fmt.Errorf("error reading logs: %w", err)
 		}
 
-		// Xử lý và hiển thị line
+		// Process and display line
 		line = strings.TrimSuffix(line, "\n")
 		if logsContainerName != "" && len(pod.Spec.Containers) > 1 {
 			fmt.Printf("[%s] %s\n", logsContainerName, line)
@@ -127,23 +132,23 @@ func runLogs(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
-// init khởi tạo cấu hình cho kube-logs command
+// init initializes configuration for kube-logs command
 func init() {
-	// Định nghĩa flags
+	// Define flags
 	logsRootCmd.Flags().StringVarP(&logsNamespace, "namespace", "n", "", "Kubernetes namespace to use")
 	logsRootCmd.Flags().StringVarP(&logsKubeContext, "context", "c", "", "Kubernetes context to use")
-	logsRootCmd.Flags().BoolVarP(&logsFollow, "follow", "f", false, "Follow logs output (real-time)")
+	logsRootCmd.Flags().BoolVarP(&logsFollow, "follow", "f", true, "Follow logs output (real-time)")
 	logsRootCmd.Flags().Int64VarP(&logsTailLines, "tail", "t", 0, "Number of lines to show from the end of the logs")
 	logsRootCmd.Flags().Int64Var(&logsSinceSeconds, "since", 0, "Show logs since this many seconds ago")
 	logsRootCmd.Flags().StringVar(&logsContainerName, "container", "", "Container name (required if pod has multiple containers)")
 	logsRootCmd.Flags().BoolVar(&logsTimestamps, "timestamps", false, "Include timestamps in output")
 
-	// Bind flags với viper
+	// Bind flags with viper
 	viper.BindPFlag("namespace", logsRootCmd.Flags().Lookup("namespace"))
 	viper.BindPFlag("context", logsRootCmd.Flags().Lookup("context"))
 }
 
-// main là entry point của kube-logs
+// main is the entry point of kube-logs
 func main() {
 	if err := logsRootCmd.Execute(); err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)

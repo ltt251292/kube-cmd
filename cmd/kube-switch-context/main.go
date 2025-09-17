@@ -3,7 +3,8 @@ package main
 import (
 	"fmt"
 	"os"
-	"text/tabwriter"
+	"regexp"
+	"strings"
 
 	"path/filepath"
 
@@ -13,21 +14,21 @@ import (
 	"k8s.io/client-go/util/homedir"
 )
 
-// switchContextRootCmd đại diện cho kube-switch-context command
+// switchContextRootCmd represents the kube-switch-context command
 var switchContextRootCmd = &cobra.Command{
 	Use:   "kube-switch-context [context-name]",
-	Short: "Chuyển đổi Kubernetes context",
-	Long: `kube-switch-context cho phép chuyển đổi nhanh giữa các Kubernetes contexts.
+	Short: "Switch Kubernetes context",
+	Long: `kube-switch-context allows quick switching between Kubernetes contexts.
 	
-Nếu không có tên context, hiển thị danh sách contexts có sẵn.
+If no context name is provided, displays list of available contexts.
 	
-Ví dụ:
-  kube-switch-context                    # Hiển thị danh sách contexts
-  kube-switch-context production         # Chuyển sang context production`,
+Examples:
+  kube-switch-context                    # Display list of contexts
+  kube-switch-context production         # Switch to production context`,
 	RunE: runSwitchContext,
 }
 
-// runSwitchContext thực thi logic chuyển đổi context
+// runSwitchContext executes the context switching logic
 func runSwitchContext(cmd *cobra.Command, args []string) error {
 	kubeconfig := switchContextGetKubeconfigPath()
 
@@ -37,22 +38,22 @@ func runSwitchContext(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to load kubeconfig: %w", err)
 	}
 
-	// Nếu không có argument, hiển thị danh sách contexts
+	// If no argument, display list of contexts
 	if len(args) == 0 {
 		return listContexts(config)
 	}
 
 	contextName := args[0]
 
-	// Kiểm tra context có tồn tại không
+	// Check if context exists
 	if _, exists := config.Contexts[contextName]; !exists {
 		return fmt.Errorf("context '%s' not found", contextName)
 	}
 
-	// Cập nhật current context
+	// Update current context
 	config.CurrentContext = contextName
 
-	// Lưu cấu hình
+	// Save configuration
 	err = clientcmd.WriteToFile(*config, kubeconfig)
 	if err != nil {
 		return fmt.Errorf("failed to save kubeconfig: %w", err)
@@ -62,10 +63,10 @@ func runSwitchContext(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
-// listContexts hiển thị danh sách tất cả contexts
+// listContexts displays list of all contexts
 func listContexts(config *api.Config) error {
-	w := tabwriter.NewWriter(os.Stdout, 0, 0, 3, ' ', 0)
-	fmt.Fprintln(w, "CURRENT\tNAME\tCLUSTER\tUSER\tNAMESPACE")
+	headers := []string{"CURRENT", "NAME", "CLUSTER", "USER", "NAMESPACE"}
+	var rows [][]string
 
 	for name, context := range config.Contexts {
 		current := ""
@@ -78,27 +79,88 @@ func listContexts(config *api.Config) error {
 			namespace = "default"
 		}
 
-		fmt.Fprintf(w, "%s\t%s\t%s\t%s\t%s\n",
-			current,
-			name,
-			context.Cluster,
-			context.AuthInfo,
-			namespace,
-		)
+		rows = append(rows, []string{current, name, context.Cluster, context.AuthInfo, namespace})
 	}
 
-	w.Flush()
+	renderTable(headers, rows)
 	return nil
 }
 
-// switchContextGetKubeconfigPath trả về đường dẫn đến kubeconfig file
+// renderTable prints an ASCII table with simple borders
+// headers: column headers, rows: row data
+func renderTable(headers []string, rows [][]string) {
+	widths := make([]int, len(headers))
+	for c, h := range headers {
+		w := displayWidth(h)
+		if w > widths[c] {
+			widths[c] = w
+		}
+	}
+	for _, row := range rows {
+		for c, cell := range row {
+			w := displayWidth(cell)
+			if w > widths[c] {
+				widths[c] = w
+			}
+		}
+	}
+
+	printSeparator(widths)
+	fmt.Println("| " + joinRow(headers, widths) + " |")
+	printSeparator(widths)
+	for _, row := range rows {
+		fmt.Println("| " + joinRow(row, widths) + " |")
+	}
+	printSeparator(widths)
+}
+
+// displayWidth returns display length (excluding ANSI codes)
+func displayWidth(s string) int {
+	return len(stripANSI(s))
+}
+
+// stripANSI removes ANSI color codes for accurate width calculation
+func stripANSI(s string) string {
+	ansi := regexp.MustCompile("\\x1b\\[[0-9;]*m")
+	return ansi.ReplaceAllString(s, "")
+}
+
+// joinRow left-aligns each cell and joins with column separator
+func joinRow(cols []string, widths []int) string {
+	parts := make([]string, len(cols))
+	for i, col := range cols {
+		pad := widths[i] - displayWidth(col)
+		if pad < 0 {
+			pad = 0
+		}
+		parts[i] = col + strings.Repeat(" ", pad)
+	}
+	return strings.Join(parts, " | ")
+}
+
+// printSeparator prints border line based on column widths
+func printSeparator(widths []int) {
+	b := strings.Builder{}
+	b.WriteString("+")
+	for i, w := range widths {
+		b.WriteString(strings.Repeat("-", w+2))
+		if i == len(widths)-1 {
+			b.WriteString("+")
+		} else {
+			b.WriteString("+")
+		}
+	}
+	fmt.Println(b.String())
+}
+
+// switchContextGetKubeconfigPath returns path to kubeconfig file
 func switchContextGetKubeconfigPath() string {
-	// Kiểm tra biến môi trường KUBECONFIG
+	// Check KUBECONFIG environment variable
 	if kubeconfig := os.Getenv("KUBECONFIG"); kubeconfig != "" {
 		return kubeconfig
 	}
 
-	// Sử dụng đường dẫn mặc định
+	// Use default path
 	if home := homedir.HomeDir(); home != "" {
 		return filepath.Join(home, ".kube", "config")
 	}
@@ -106,7 +168,7 @@ func switchContextGetKubeconfigPath() string {
 	return ""
 }
 
-// main là entry point của kube-switch-context
+// main is the entry point of kube-switch-context
 func main() {
 	if err := switchContextRootCmd.Execute(); err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
