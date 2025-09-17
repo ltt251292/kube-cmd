@@ -20,12 +20,12 @@ import (
 )
 
 var (
-	namespace   string
-	kubeContext string
+	portForwardNamespace   string
+	portForwardKubeContext string
 )
 
-// rootCmd đại diện cho kube-port-forward command
-var rootCmd = &cobra.Command{
+// portForwardRootCmd đại diện cho kube-port-forward command
+var portForwardRootCmd = &cobra.Command{
 	Use:   "kube-port-forward [pod-name] [local-port]:[remote-port]",
 	Short: "Forward một local port đến port của pod",
 	Long: `kube-port-forward tạo tunnel từ local port đến port của pod trong cluster.
@@ -51,12 +51,12 @@ func runPortForward(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("invalid port specification '%s': %w", portSpec, err)
 	}
 
-	client, err := k8s.NewClient("", kubeContext)
+	client, err := k8s.NewClient("", portForwardKubeContext)
 	if err != nil {
 		return fmt.Errorf("failed to create kubernetes client: %w", err)
 	}
 
-	targetNamespace := namespace
+	targetNamespace := portForwardNamespace
 	if targetNamespace == "" {
 		targetNamespace = "default"
 	}
@@ -159,17 +159,17 @@ func parsePortSpec(spec string) (int, int, error) {
 // init khởi tạo cấu hình cho kube-port-forward command
 func init() {
 	// Định nghĩa flags
-	rootCmd.Flags().StringVarP(&namespace, "namespace", "n", "", "Kubernetes namespace to use")
-	rootCmd.Flags().StringVarP(&kubeContext, "context", "c", "", "Kubernetes context to use")
+	portForwardRootCmd.Flags().StringVarP(&portForwardNamespace, "namespace", "n", "", "Kubernetes namespace to use")
+	portForwardRootCmd.Flags().StringVarP(&portForwardKubeContext, "context", "c", "", "Kubernetes context to use")
 
 	// Bind flags với viper
-	viper.BindPFlag("namespace", rootCmd.Flags().Lookup("namespace"))
-	viper.BindPFlag("context", rootCmd.Flags().Lookup("context"))
+	viper.BindPFlag("namespace", portForwardRootCmd.Flags().Lookup("namespace"))
+	viper.BindPFlag("context", portForwardRootCmd.Flags().Lookup("context"))
 }
 
 // main là entry point của kube-port-forward
 func main() {
-	if err := rootCmd.Execute(); err != nil {
+	if err := portForwardRootCmd.Execute(); err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 		os.Exit(1)
 	}

@@ -13,8 +13,8 @@ import (
 	"k8s.io/client-go/util/homedir"
 )
 
-// rootCmd đại diện cho kube-switch-context command
-var rootCmd = &cobra.Command{
+// switchContextRootCmd đại diện cho kube-switch-context command
+var switchContextRootCmd = &cobra.Command{
 	Use:   "kube-switch-context [context-name]",
 	Short: "Chuyển đổi Kubernetes context",
 	Long: `kube-switch-context cho phép chuyển đổi nhanh giữa các Kubernetes contexts.
@@ -29,7 +29,7 @@ Ví dụ:
 
 // runSwitchContext thực thi logic chuyển đổi context
 func runSwitchContext(cmd *cobra.Command, args []string) error {
-	kubeconfig := getKubeconfigPath()
+	kubeconfig := switchContextGetKubeconfigPath()
 
 	// Load kubeconfig
 	config, err := clientcmd.LoadFromFile(kubeconfig)
@@ -91,8 +91,8 @@ func listContexts(config *api.Config) error {
 	return nil
 }
 
-// getKubeconfigPath trả về đường dẫn đến kubeconfig file
-func getKubeconfigPath() string {
+// switchContextGetKubeconfigPath trả về đường dẫn đến kubeconfig file
+func switchContextGetKubeconfigPath() string {
 	// Kiểm tra biến môi trường KUBECONFIG
 	if kubeconfig := os.Getenv("KUBECONFIG"); kubeconfig != "" {
 		return kubeconfig
@@ -108,7 +108,7 @@ func getKubeconfigPath() string {
 
 // main là entry point của kube-switch-context
 func main() {
-	if err := rootCmd.Execute(); err != nil {
+	if err := switchContextRootCmd.Execute(); err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 		os.Exit(1)
 	}

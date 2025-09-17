@@ -11,8 +11,8 @@ import (
 	"k8s.io/client-go/util/homedir"
 )
 
-// rootCmd đại diện cho kube-switch-namespace command
-var rootCmd = &cobra.Command{
+// switchNamespaceRootCmd đại diện cho kube-switch-namespace command
+var switchNamespaceRootCmd = &cobra.Command{
 	Use:   "kube-switch-namespace [namespace-name]",
 	Short: "Chuyển đổi namespace",
 	Long: `kube-switch-namespace cho phép chuyển đổi namespace trong context hiện tại.
@@ -27,7 +27,7 @@ Ví dụ:
 
 // runSwitchNamespace thực thi logic chuyển đổi namespace
 func runSwitchNamespace(cmd *cobra.Command, args []string) error {
-	kubeconfig := getKubeconfigPath()
+	kubeconfig := switchNamespaceGetKubeconfigPath()
 
 	// Load kubeconfig
 	config, err := clientcmd.LoadFromFile(kubeconfig)
@@ -71,8 +71,8 @@ func runSwitchNamespace(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
-// getKubeconfigPath trả về đường dẫn đến kubeconfig file
-func getKubeconfigPath() string {
+// switchNamespaceGetKubeconfigPath trả về đường dẫn đến kubeconfig file
+func switchNamespaceGetKubeconfigPath() string {
 	// Kiểm tra biến môi trường KUBECONFIG
 	if kubeconfig := os.Getenv("KUBECONFIG"); kubeconfig != "" {
 		return kubeconfig
@@ -88,7 +88,7 @@ func getKubeconfigPath() string {
 
 // main là entry point của kube-switch-namespace
 func main() {
-	if err := rootCmd.Execute(); err != nil {
+	if err := switchNamespaceRootCmd.Execute(); err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 		os.Exit(1)
 	}

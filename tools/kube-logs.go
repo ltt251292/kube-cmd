@@ -17,17 +17,17 @@ import (
 )
 
 var (
-	namespace     string
-	kubeContext   string
-	follow        bool
-	tailLines     int64
-	sinceSeconds  int64
-	containerName string
-	timestamps    bool
+	logsNamespace     string
+	logsKubeContext   string
+	logsFollow        bool
+	logsTailLines     int64
+	logsSinceSeconds  int64
+	logsContainerName string
+	logsTimestamps    bool
 )
 
-// rootCmd đại diện cho kube-logs command
-var rootCmd = &cobra.Command{
+// logsRootCmd đại diện cho kube-logs command
+var logsRootCmd = &cobra.Command{
 	Use:   "kube-logs [pod-name]",
 	Short: "Hiển thị logs của pod",
 	Long: `kube-logs hiển thị logs của một pod cụ thể.
@@ -51,12 +51,12 @@ Ví dụ:
 func runLogs(cmd *cobra.Command, args []string) error {
 	podName := args[0]
 
-	client, err := k8s.NewClient("", kubeContext)
+	client, err := k8s.NewClient("", logsKubeContext)
 	if err != nil {
 		return fmt.Errorf("failed to create kubernetes client: %w", err)
 	}
 
-	targetNamespace := namespace
+	targetNamespace := logsNamespace
 	if targetNamespace == "" {
 		targetNamespace = "default"
 	}
@@ -68,7 +68,7 @@ func runLogs(cmd *cobra.Command, args []string) error {
 	}
 
 	// Nếu không chỉ định container và pod có nhiều containers
-	if containerName == "" && len(pod.Spec.Containers) > 1 {
+	if logsContainerName == "" && len(pod.Spec.Containers) > 1 {
 		fmt.Println("Pod has multiple containers:")
 		for i, container := range pod.Spec.Containers {
 			fmt.Printf("  %d. %s\n", i+1, container.Name)
@@ -77,23 +77,23 @@ func runLogs(cmd *cobra.Command, args []string) error {
 	}
 
 	// Sử dụng container đầu tiên nếu không chỉ định
-	if containerName == "" {
-		containerName = pod.Spec.Containers[0].Name
+	if logsContainerName == "" {
+		logsContainerName = pod.Spec.Containers[0].Name
 	}
 
 	// Thiết lập options cho logs
 	logOptions := &corev1.PodLogOptions{
-		Container:  containerName,
-		Follow:     follow,
-		Timestamps: timestamps,
+		Container:  logsContainerName,
+		Follow:     logsFollow,
+		Timestamps: logsTimestamps,
 	}
 
-	if tailLines > 0 {
-		logOptions.TailLines = &tailLines
+	if logsTailLines > 0 {
+		logOptions.TailLines = &logsTailLines
 	}
 
-	if sinceSeconds > 0 {
-		logOptions.SinceSeconds = &sinceSeconds
+	if logsSinceSeconds > 0 {
+		logOptions.SinceSeconds = &logsSinceSeconds
 	}
 
 	// Lấy logs stream
@@ -117,8 +117,8 @@ func runLogs(cmd *cobra.Command, args []string) error {
 
 		// Xử lý và hiển thị line
 		line = strings.TrimSuffix(line, "\n")
-		if containerName != "" && len(pod.Spec.Containers) > 1 {
-			fmt.Printf("[%s] %s\n", containerName, line)
+		if logsContainerName != "" && len(pod.Spec.Containers) > 1 {
+			fmt.Printf("[%s] %s\n", logsContainerName, line)
 		} else {
 			fmt.Println(line)
 		}
@@ -130,22 +130,22 @@ func runLogs(cmd *cobra.Command, args []string) error {
 // init khởi tạo cấu hình cho kube-logs command
 func init() {
 	// Định nghĩa flags
-	rootCmd.Flags().StringVarP(&namespace, "namespace", "n", "", "Kubernetes namespace to use")
-	rootCmd.Flags().StringVarP(&kubeContext, "context", "c", "", "Kubernetes context to use")
-	rootCmd.Flags().BoolVarP(&follow, "follow", "f", false, "Follow logs output (real-time)")
-	rootCmd.Flags().Int64VarP(&tailLines, "tail", "t", 0, "Number of lines to show from the end of the logs")
-	rootCmd.Flags().Int64Var(&sinceSeconds, "since", 0, "Show logs since this many seconds ago")
-	rootCmd.Flags().StringVar(&containerName, "container", "", "Container name (required if pod has multiple containers)")
-	rootCmd.Flags().BoolVar(&timestamps, "timestamps", false, "Include timestamps in output")
+	logsRootCmd.Flags().StringVarP(&logsNamespace, "namespace", "n", "", "Kubernetes namespace to use")
+	logsRootCmd.Flags().StringVarP(&logsKubeContext, "context", "c", "", "Kubernetes context to use")
+	logsRootCmd.Flags().BoolVarP(&logsFollow, "follow", "f", false, "Follow logs output (real-time)")
+	logsRootCmd.Flags().Int64VarP(&logsTailLines, "tail", "t", 0, "Number of lines to show from the end of the logs")
+	logsRootCmd.Flags().Int64Var(&logsSinceSeconds, "since", 0, "Show logs since this many seconds ago")
+	logsRootCmd.Flags().StringVar(&logsContainerName, "container", "", "Container name (required if pod has multiple containers)")
+	logsRootCmd.Flags().BoolVar(&logsTimestamps, "timestamps", false, "Include timestamps in output")
 
 	// Bind flags với viper
-	viper.BindPFlag("namespace", rootCmd.Flags().Lookup("namespace"))
-	viper.BindPFlag("context", rootCmd.Flags().Lookup("context"))
+	viper.BindPFlag("namespace", logsRootCmd.Flags().Lookup("namespace"))
+	viper.BindPFlag("context", logsRootCmd.Flags().Lookup("context"))
 }
 
 // main là entry point của kube-logs
 func main() {
-	if err := rootCmd.Execute(); err != nil {
+	if err := logsRootCmd.Execute(); err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 		os.Exit(1)
 	}

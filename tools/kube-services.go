@@ -14,13 +14,13 @@ import (
 )
 
 var (
-	namespace     string
-	context       string
-	allNamespaces bool
+	servicesNamespace     string
+	servicesContext       string
+	servicesAllNamespaces bool
 )
 
-// rootCmd đại diện cho kube-services command
-var rootCmd = &cobra.Command{
+// servicesRootCmd đại diện cho kube-services command
+var servicesRootCmd = &cobra.Command{
 	Use:   "kube-services",
 	Short: "Hiển thị danh sách services",
 	Long: `kube-services là một tool để xem danh sách services trong Kubernetes cluster.
@@ -31,18 +31,18 @@ Tương đương với kubectl get services nhưng với format đẹp hơn và 
 
 // runServices thực thi logic lấy danh sách services
 func runServices(cmd *cobra.Command, args []string) error {
-	client, err := k8s.NewClient("", context)
+	client, err := k8s.NewClient("", servicesContext)
 	if err != nil {
 		return fmt.Errorf("failed to create kubernetes client: %w", err)
 	}
 
-	targetNamespace := namespace
+	targetNamespace := servicesNamespace
 	if targetNamespace == "" {
 		targetNamespace = "default"
 	}
 
 	// Nếu --all-namespaces, lấy từ tất cả namespaces
-	if allNamespaces {
+	if servicesAllNamespaces {
 		targetNamespace = ""
 	}
 
@@ -54,7 +54,7 @@ func runServices(cmd *cobra.Command, args []string) error {
 	// Hiển thị kết quả dạng bảng
 	w := tabwriter.NewWriter(os.Stdout, 0, 0, 3, ' ', 0)
 
-	if allNamespaces {
+	if servicesAllNamespaces {
 		fmt.Fprintln(w, "NAMESPACE\tNAME\tTYPE\tCLUSTER-IP\tEXTERNAL-IP\tPORT(S)\tAGE")
 	} else {
 		fmt.Fprintln(w, "NAME\tTYPE\tCLUSTER-IP\tEXTERNAL-IP\tPORT(S)\tAGE")
@@ -84,7 +84,7 @@ func runServices(cmd *cobra.Command, args []string) error {
 
 		age := metav1.Now().Time.Sub(svc.CreationTimestamp.Time)
 
-		if allNamespaces {
+		if servicesAllNamespaces {
 			fmt.Fprintf(w, "%s\t%s\t%s\t%s\t%s\t%s\t%s\n",
 				svc.Namespace,
 				svc.Name,
@@ -113,18 +113,18 @@ func runServices(cmd *cobra.Command, args []string) error {
 // init khởi tạo cấu hình cho kube-services command
 func init() {
 	// Định nghĩa flags
-	rootCmd.Flags().StringVarP(&namespace, "namespace", "n", "", "Kubernetes namespace to use")
-	rootCmd.Flags().StringVarP(&context, "context", "c", "", "Kubernetes context to use")
-	rootCmd.Flags().BoolVarP(&allNamespaces, "all-namespaces", "A", false, "Hiển thị services từ tất cả namespaces")
+	servicesRootCmd.Flags().StringVarP(&servicesNamespace, "namespace", "n", "", "Kubernetes namespace to use")
+	servicesRootCmd.Flags().StringVarP(&servicesContext, "context", "c", "", "Kubernetes context to use")
+	servicesRootCmd.Flags().BoolVarP(&servicesAllNamespaces, "all-namespaces", "A", false, "Hiển thị services từ tất cả namespaces")
 
 	// Bind flags với viper
-	viper.BindPFlag("namespace", rootCmd.Flags().Lookup("namespace"))
-	viper.BindPFlag("context", rootCmd.Flags().Lookup("context"))
+	viper.BindPFlag("namespace", servicesRootCmd.Flags().Lookup("namespace"))
+	viper.BindPFlag("context", servicesRootCmd.Flags().Lookup("context"))
 }
 
 // main là entry point của kube-services
 func main() {
-	if err := rootCmd.Execute(); err != nil {
+	if err := servicesRootCmd.Execute(); err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 		os.Exit(1)
 	}

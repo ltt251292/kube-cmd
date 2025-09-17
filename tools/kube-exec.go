@@ -16,15 +16,15 @@ import (
 )
 
 var (
-	namespace     string
-	kubeContext   string
-	execContainer string
-	execTty       bool
-	execStdin     bool
+	execNamespace   string
+	execKubeContext string
+	execContainer   string
+	execTty         bool
+	execStdin       bool
 )
 
-// rootCmd đại diện cho kube-exec command
-var rootCmd = &cobra.Command{
+// execRootCmd đại diện cho kube-exec command
+var execRootCmd = &cobra.Command{
 	Use:   "kube-exec [pod-name] -- [command...]",
 	Short: "Thực thi command trong pod",
 	Long: `kube-exec cho phép thực thi command bên trong container của pod.
@@ -46,12 +46,12 @@ func runExec(cmd *cobra.Command, args []string) error {
 	podName := args[0]
 	command := args[2:]
 
-	client, err := k8s.NewClient("", kubeContext)
+	client, err := k8s.NewClient("", execKubeContext)
 	if err != nil {
 		return fmt.Errorf("failed to create kubernetes client: %w", err)
 	}
 
-	targetNamespace := namespace
+	targetNamespace := execNamespace
 	if targetNamespace == "" {
 		targetNamespace = "default"
 	}
@@ -115,20 +115,20 @@ func runExec(cmd *cobra.Command, args []string) error {
 // init khởi tạo cấu hình cho kube-exec command
 func init() {
 	// Định nghĩa flags
-	rootCmd.Flags().StringVarP(&namespace, "namespace", "n", "", "Kubernetes namespace to use")
-	rootCmd.Flags().StringVarP(&kubeContext, "context", "c", "", "Kubernetes context to use")
-	rootCmd.Flags().StringVar(&execContainer, "container", "", "Container name (required if pod has multiple containers)")
-	rootCmd.Flags().BoolVarP(&execTty, "tty", "t", true, "Allocate a TTY")
-	rootCmd.Flags().BoolVarP(&execStdin, "stdin", "i", true, "Keep STDIN open")
+	execRootCmd.Flags().StringVarP(&execNamespace, "namespace", "n", "", "Kubernetes namespace to use")
+	execRootCmd.Flags().StringVarP(&execKubeContext, "context", "c", "", "Kubernetes context to use")
+	execRootCmd.Flags().StringVar(&execContainer, "container", "", "Container name (required if pod has multiple containers)")
+	execRootCmd.Flags().BoolVarP(&execTty, "tty", "t", true, "Allocate a TTY")
+	execRootCmd.Flags().BoolVarP(&execStdin, "stdin", "i", true, "Keep STDIN open")
 
 	// Bind flags với viper
-	viper.BindPFlag("namespace", rootCmd.Flags().Lookup("namespace"))
-	viper.BindPFlag("context", rootCmd.Flags().Lookup("context"))
+	viper.BindPFlag("namespace", execRootCmd.Flags().Lookup("namespace"))
+	viper.BindPFlag("context", execRootCmd.Flags().Lookup("context"))
 }
 
 // main là entry point của kube-exec
 func main() {
-	if err := rootCmd.Execute(); err != nil {
+	if err := execRootCmd.Execute(); err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 		os.Exit(1)
 	}
