@@ -1,4 +1,4 @@
-# Makefile cho kube
+# Makefile for kube
 
 # Variables
 BINARY_NAME=kube
@@ -7,25 +7,25 @@ BUILD_TIME=$(shell date +%Y-%m-%d_%T)
 LDFLAGS=-ldflags "-X main.Version=${VERSION} -X main.BuildTime=${BUILD_TIME}"
 
 # List of all kube-* binaries
-KUBE_BINARIES=kube-pods kube-services kube-switch-context kube-switch-namespace kube-logs kube-port-forward kube-exec
+KUBE_BINARIES=kube-pods kube-services kube-switch-context kube-switch-namespace kube-logs kube-port-forward kube-exec kube-deploy kube-rollout
 
 # Default target
 .PHONY: all
 all: build
 
-# Build main binary
+# Build main binary (from cmd/kube)
 .PHONY: build
 build:
 	@echo "Building ${BINARY_NAME}..."
-	go build ${LDFLAGS} -o ${BINARY_NAME} .
+	go build ${LDFLAGS} -o ${BINARY_NAME} ./cmd/kube
 
-# Build all kube-* binaries
+# Build all kube-* binaries from cmd/*
 .PHONY: build-all-tools
 build-all-tools:
 	@echo "Building all kube tools..."
 	@for binary in ${KUBE_BINARIES}; do \
 		echo "Building $$binary..."; \
-		go build ${LDFLAGS} -o $$binary tools/$$binary.go; \
+		go build ${LDFLAGS} -o $$binary ./cmd/$$binary; \
 	done
 
 # Build everything
@@ -36,10 +36,10 @@ build-all: build build-all-tools
 .PHONY: build-cross-platform
 build-cross-platform:
 	@echo "Building for multiple platforms..."
-	GOOS=linux GOARCH=amd64 go build ${LDFLAGS} -o ${BINARY_NAME}-linux-amd64 .
-	GOOS=darwin GOARCH=amd64 go build ${LDFLAGS} -o ${BINARY_NAME}-darwin-amd64 .
-	GOOS=darwin GOARCH=arm64 go build ${LDFLAGS} -o ${BINARY_NAME}-darwin-arm64 .
-	GOOS=windows GOARCH=amd64 go build ${LDFLAGS} -o ${BINARY_NAME}-windows-amd64.exe .
+	GOOS=linux GOARCH=amd64 go build ${LDFLAGS} -o ${BINARY_NAME}-linux-amd64 ./cmd/kube
+	GOOS=darwin GOARCH=amd64 go build ${LDFLAGS} -o ${BINARY_NAME}-darwin-amd64 ./cmd/kube
+	GOOS=darwin GOARCH=arm64 go build ${LDFLAGS} -o ${BINARY_NAME}-darwin-arm64 ./cmd/kube
+	GOOS=windows GOARCH=amd64 go build ${LDFLAGS} -o ${BINARY_NAME}-windows-amd64.exe ./cmd/kube
 
 # Install binary to /usr/local/bin
 .PHONY: install
@@ -122,7 +122,7 @@ deps:
 # Run the application
 .PHONY: run
 run:
-	go run . $(ARGS)
+	go run ./cmd/kube $(ARGS)
 
 # Development helpers
 .PHONY: dev-setup

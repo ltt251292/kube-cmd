@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"os"
 
-	"kube/pkg/k8s"
+	"kube/pkg/kubernetes/k8s"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -16,28 +16,28 @@ import (
 )
 
 var (
-	namespace     string
-	kubeContext   string
-	execContainer string
-	execTty       bool
-	execStdin     bool
+	execNamespace   string
+	execKubeContext string
+	execContainer   string
+	execTty         bool
+	execStdin       bool
 )
 
-// rootCmd đại diện cho kube-exec command
-var rootCmd = &cobra.Command{
+// execRootCmd represents the kube-exec command
+var execRootCmd = &cobra.Command{
 	Use:   "kube-exec [pod-name] -- [command...]",
-	Short: "Thực thi command trong pod",
-	Long: `kube-exec cho phép thực thi command bên trong container của pod.
+	Short: "Execute command in pod",
+	Long: `kube-exec allows executing commands inside a pod's container.
 	
-Ví dụ:
-  kube-exec my-pod -- bash                       # Mở bash shell
-  kube-exec my-pod -- ls -la /app                # Thực thi command cụ thể
-  kube-exec my-pod -c container-name -- env      # Exec vào container cụ thể`,
+Examples:
+  kube-exec my-pod -- bash                       # Open bash shell
+  kube-exec my-pod -- ls -la /app                # Execute specific command
+  kube-exec my-pod -c container-name -- env      # Exec into specific container`,
 	Args: cobra.MinimumNArgs(1),
 	RunE: runExec,
 }
 
-// runExec thực thi logic exec command
+// runExec executes the exec command logic
 func runExec(cmd *cobra.Command, args []string) error {
 	if len(args) < 3 || args[1] != "--" {
 		return fmt.Errorf("invalid syntax. Use: kube-exec [pod-name] -- [command...]")
@@ -46,23 +46,28 @@ func runExec(cmd *cobra.Command, args []string) error {
 	podName := args[0]
 	command := args[2:]
 
-	client, err := k8s.NewClient("", kubeContext)
+	client, err := k8s.NewClient("", execKubeContext)
 	if err != nil {
 		return fmt.Errorf("failed to create kubernetes client: %w", err)
 	}
 
-	targetNamespace := namespace
+	targetNamespace := execNamespace
 	if targetNamespace == "" {
-		targetNamespace = "default"
+		// Get current namespace from kubeconfig if no --namespace flag
+		ns, err := k8s.GetCurrentNamespace(execKubeContext)
+		if err != nil {
+			return fmt.Errorf("failed to get current namespace: %w", err)
+		}
+		targetNamespace = ns
 	}
 
-	// Lấy thông tin pod để kiểm tra containers
+	// Get pod information to check containers
 	pod, err := client.Clientset.CoreV1().Pods(targetNamespace).Get(context.Background(), podName, metav1.GetOptions{})
 	if err != nil {
 		return fmt.Errorf("failed to get pod %s: %w", podName, err)
 	}
 
-	// Nếu không chỉ định container và pod có nhiều containers
+	// If no container is specified and pod has multiple containers
 	if execContainer == "" && len(pod.Spec.Containers) > 1 {
 		fmt.Println("Pod has multiple containers:")
 		for i, container := range pod.Spec.Containers {
@@ -71,12 +76,12 @@ func runExec(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("please specify container with -c flag")
 	}
 
-	// Sử dụng container đầu tiên nếu không chỉ định
+	// Use first container if not specified
 	if execContainer == "" {
 		execContainer = pod.Spec.Containers[0].Name
 	}
 
-	// Thiết lập exec request
+	// Set up exec request
 	req := client.Clientset.CoreV1().RESTClient().Post().
 		Resource("pods").
 		Name(podName).
@@ -92,13 +97,13 @@ func runExec(cmd *cobra.Command, args []string) error {
 		TTY:       execTty,
 	}, scheme.ParameterCodec)
 
-	// Tạo executor
+	// Create executor
 	executor, err := remotecommand.NewSPDYExecutor(client.Config, "POST", req.URL())
 	if err != nil {
 		return fmt.Errorf("failed to create executor: %w", err)
 	}
 
-	// Thực thi command
+	// Execute command
 	err = executor.Stream(remotecommand.StreamOptions{
 		Stdin:  os.Stdin,
 		Stdout: os.Stdout,
@@ -112,23 +117,23 @@ func runExec(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
-// init khởi tạo cấu hình cho kube-exec command
+// init initializes configuration for kube-exec command
 func init() {
-	// Định nghĩa flags
-	rootCmd.Flags().StringVarP(&namespace, "namespace", "n", "", "Kubernetes namespace to use")
-	rootCmd.Flags().StringVarP(&kubeContext, "context", "c", "", "Kubernetes context to use")
-	rootCmd.Flags().StringVar(&execContainer, "container", "", "Container name (required if pod has multiple containers)")
-	rootCmd.Flags().BoolVarP(&execTty, "tty", "t", true, "Allocate a TTY")
-	rootCmd.Flags().BoolVarP(&execStdin, "stdin", "i", true, "Keep STDIN open")
+	// Define flags
+	execRootCmd.Flags().StringVarP(&execNamespace, "namespace", "n", "", "Kubernetes namespace to use")
+	execRootCmd.Flags().StringVarP(&execKubeContext, "context", "c", "", "Kubernetes context to use")
+	execRootCmd.Flags().StringVar(&execContainer, "container", "", "Container name (required if pod has multiple containers)")
+	execRootCmd.Flags().BoolVarP(&execTty, "tty", "t", true, "Allocate a TTY")
+	execRootCmd.Flags().BoolVarP(&execStdin, "stdin", "i", true, "Keep STDIN open")
 
-	// Bind flags với viper
-	viper.BindPFlag("namespace", rootCmd.Flags().Lookup("namespace"))
-	viper.BindPFlag("context", rootCmd.Flags().Lookup("context"))
+	// Bind flags with viper
+	viper.BindPFlag("namespace", execRootCmd.Flags().Lookup("namespace"))
+	viper.BindPFlag("context", execRootCmd.Flags().Lookup("context"))
 }
 
-// main là entry point của kube-exec
+// main is the entry point of kube-exec
 func main() {
-	if err := rootCmd.Execute(); err != nil {
+	if err := execRootCmd.Execute(); err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 		os.Exit(1)
 	}

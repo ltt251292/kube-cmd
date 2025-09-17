@@ -12,41 +12,41 @@ import (
 	"k8s.io/client-go/util/homedir"
 )
 
-// Client wraps Kubernetes client với các helper methods
+// Client wraps Kubernetes client with helper methods
 type Client struct {
 	Clientset *kubernetes.Clientset
 	Config    *rest.Config
 	Context   context.Context
 }
 
-// NewClient tạo một Kubernetes client mới
-// Tự động phát hiện cấu hình từ kubeconfig hoặc in-cluster config
+// NewClient creates a new Kubernetes client
+// Automatically detects configuration from kubeconfig or in-cluster config
 func NewClient(kubeconfig string, contextName string) (*Client, error) {
 	var config *rest.Config
 	var err error
 
 	if kubeconfig == "" {
-		// Thử tìm kubeconfig file ở vị trí mặc định
+		// Try to find kubeconfig file at default location
 		if home := homedir.HomeDir(); home != "" {
 			kubeconfig = filepath.Join(home, ".kube", "config")
 		}
 	}
 
-	// Kiểm tra xem có đang chạy trong cluster không
+	// Check if running inside cluster
 	if _, err := os.Stat("/var/run/secrets/kubernetes.io/serviceaccount/token"); err == nil {
-		// Sử dụng in-cluster config
+		// Use in-cluster config
 		config, err = rest.InClusterConfig()
 		if err != nil {
 			return nil, fmt.Errorf("failed to create in-cluster config: %w", err)
 		}
 	} else {
-		// Sử dụng kubeconfig file
+		// Use kubeconfig file
 		config, err = clientcmd.BuildConfigFromFlags("", kubeconfig)
 		if err != nil {
 			return nil, fmt.Errorf("failed to build config from kubeconfig: %w", err)
 		}
 
-		// Nếu có context name được chỉ định, load config với context đó
+		// If context name is specified, load config with that context
 		if contextName != "" {
 			loadingRules := clientcmd.NewDefaultClientConfigLoadingRules()
 			loadingRules.ExplicitPath = kubeconfig
@@ -65,7 +65,7 @@ func NewClient(kubeconfig string, contextName string) (*Client, error) {
 		}
 	}
 
-	// Tạo clientset
+	// Create clientset
 	clientset, err := kubernetes.NewForConfig(config)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create clientset: %w", err)
@@ -78,8 +78,45 @@ func NewClient(kubeconfig string, contextName string) (*Client, error) {
 	}, nil
 }
 
-// SetNamespace thiết lập default namespace cho client
+// SetNamespace sets default namespace for client
 func (c *Client) SetNamespace(namespace string) {
-	// Cập nhật context với namespace
+	// Update context with namespace
 	c.Context = context.WithValue(c.Context, "namespace", namespace)
+}
+
+// GetCurrentNamespace returns current namespace from kubeconfig for specified context.
+// If namespace is not found, returns "default".
+func GetCurrentNamespace(contextName string) (string, error) {
+	// Determine default kubeconfig path
+	kubeconfigPath := ""
+	if home := homedir.HomeDir(); home != "" {
+		kubeconfigPath = filepath.Join(home, ".kube", "config")
+	}
+
+	// Load raw config from kubeconfig
+	rawCfg, err := clientcmd.LoadFromFile(kubeconfigPath)
+	if err != nil {
+		return "", fmt.Errorf("failed to load kubeconfig: %w", err)
+	}
+
+	// Determine context to use
+	activeContext := contextName
+	if activeContext == "" {
+		activeContext = rawCfg.CurrentContext
+	}
+	if activeContext == "" {
+		// No context => fallback to default namespace
+		return "default", nil
+	}
+
+	ctx, ok := rawCfg.Contexts[activeContext]
+	if !ok || ctx == nil {
+		return "default", nil
+	}
+
+	if ctx.Namespace != "" {
+		return ctx.Namespace, nil
+	}
+
+	return "default", nil
 }

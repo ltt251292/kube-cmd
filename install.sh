@@ -1,8 +1,8 @@
 #!/bin/bash
 
-# install.sh - Script cài đặt Kube Tools từ GitHub
+# install.sh - Script to install Kube Tools from GitHub
 # Usage: curl -fsSL https://raw.githubusercontent.com/ltt251292/kube-cmd/main/install.sh | bash
-# hoặc: ./install.sh [options]
+# or: ./install.sh [options]
 
 set -euo pipefail
 
@@ -13,7 +13,7 @@ YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
-# Default values (có thể override bằng environment variables)
+# Default values (can be overridden by environment variables)
 INSTALL_DIR="${KUBE_INSTALL_DIR:-/usr/local/bin}"
 BUILD_ONLY="${KUBE_BUILD_ONLY:-false}"
 FORCE="${KUBE_FORCE:-false}"
@@ -27,46 +27,46 @@ CLEANUP_TEMP=false
 SCRIPT_NAME="$(basename "$0")"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-# Function để hiển thị help
+# Function to show help
 show_help() {
     echo "Kube Tools Installer"
     echo ""
     echo "Usage: $SCRIPT_NAME [OPTIONS]"
     echo ""
     echo "Options:"
-    echo "  -h, --help          Hiển thị help này"
-    echo "  -d, --dir DIR       Thư mục cài đặt (default: $INSTALL_DIR)"
-    echo "  -b, --build-only    Chỉ build, không cài đặt"
-    echo "  -f, --force         Ghi đè files đã tồn tại"
-    echo "  -q, --quiet         Chế độ quiet (ít output)"
-    echo "  --uninstall         Gỡ bỏ tất cả tools"
+    echo "  -h, --help          Show this help"
+    echo "  -d, --dir DIR       Installation directory (default: $INSTALL_DIR)"
+    echo "  -b, --build-only    Build only, do not install"
+    echo "  -f, --force         Overwrite existing files"
+    echo "  -q, --quiet         Quiet mode (less output)"
+    echo "  --uninstall         Uninstall all tools"
     echo "  --repo URL          GitHub repository URL (default: $REPO_URL)"
-    echo "  --branch BRANCH     Git branch để clone (default: $BRANCH)"
+    echo "  --branch BRANCH     Git branch to clone (default: $BRANCH)"
     echo ""
     echo "Environment Variables:"
-    echo "  KUBE_INSTALL_DIR    Thư mục cài đặt (override --dir)"
-    echo "  KUBE_BUILD_ONLY     Chỉ build: true/false (override --build-only)"
-    echo "  KUBE_FORCE          Ghi đè files: true/false (override --force)"
-    echo "  KUBE_QUIET          Chế độ quiet: true/false (override --quiet)"
+    echo "  KUBE_INSTALL_DIR    Installation directory (override --dir)"
+    echo "  KUBE_BUILD_ONLY     Build only: true/false (override --build-only)"
+    echo "  KUBE_FORCE          Overwrite files: true/false (override --force)"
+    echo "  KUBE_QUIET          Quiet mode: true/false (override --quiet)"
     echo "  KUBE_REPO_URL       Repository URL (override --repo)"
     echo "  KUBE_BRANCH         Git branch (override --branch)"
     echo ""
     echo "Examples:"
-    echo "  # Cài đặt từ internet (khuyến nghị)"
+    echo "  # Install from internet (recommended)"
     echo "  curl -fsSL https://raw.githubusercontent.com/ltt251292/kube-cmd/main/install.sh | bash"
     echo ""
-    echo "  # Với environment variables"
+    echo "  # With environment variables"
     echo "  KUBE_INSTALL_DIR=~/bin curl -fsSL ... | bash"
     echo "  KUBE_BUILD_ONLY=true KUBE_QUIET=true curl -fsSL ... | bash"
     echo ""
-    echo "  # Cài đặt local"
-    echo "  $SCRIPT_NAME                    # Cài đặt tất cả tools"
-    echo "  $SCRIPT_NAME --build-only       # Chỉ build tools"
-    echo "  $SCRIPT_NAME --dir ~/bin        # Cài đặt vào ~/bin"
-    echo "  $SCRIPT_NAME --uninstall        # Gỡ bỏ tools"
+    echo "  # Local installation"
+    echo "  $SCRIPT_NAME                    # Install all tools"
+    echo "  $SCRIPT_NAME --build-only       # Build tools only"
+    echo "  $SCRIPT_NAME --dir ~/bin        # Install to ~/bin"
+    echo "  $SCRIPT_NAME --uninstall        # Uninstall tools"
 }
 
-# Function để log messages
+# Function to log messages
 log() {
     if [[ "$QUIET" == "false" ]]; then
         echo -e "${BLUE}[INFO]${NC} $1"
@@ -85,57 +85,57 @@ log_error() {
     echo -e "${RED}[ERROR]${NC} $1" >&2
 }
 
-# Function để kiểm tra requirements
+# Function to check requirements
 check_requirements() {
-    log "Kiểm tra requirements..."
+    log "Checking requirements..."
     
-    # Kiểm tra Git (cần để clone repo)
+    # Check Git (needed to clone repo)
     if ! command -v git &> /dev/null; then
-        log_error "Git không được cài đặt. Vui lòng cài đặt Git trước."
+        log_error "Git is not installed. Please install Git first."
         exit 1
     fi
     
     log "Git ✓"
     
-    # Kiểm tra Go
+    # Check Go
     if ! command -v go &> /dev/null; then
-        log_error "Go không được cài đặt. Vui lòng cài đặt Go 1.21+ trước."
+        log_error "Go is not installed. Please install Go 1.21+ first."
         exit 1
     fi
     
-    # Kiểm tra Go version
+    # Check Go version
     go_version=$(go version | grep -oE 'go[0-9]+\.[0-9]+' | sed 's/go//')
     go_major=$(echo $go_version | cut -d. -f1)
     go_minor=$(echo $go_version | cut -d. -f2)
     
     if [[ $go_major -lt 1 ]] || [[ $go_major -eq 1 && $go_minor -lt 21 ]]; then
-        log_error "Go version $go_version không được hỗ trợ. Cần Go 1.21+."
+        log_error "Go version $go_version is not supported. Need Go 1.21+."
         exit 1
     fi
     
     log "Go version $go_version ✓"
     
-    # Kiểm tra make
+    # Check make
     if ! command -v make &> /dev/null; then
-        log_error "Make không được cài đặt."
+        log_error "Make is not installed."
         exit 1
     fi
     
     log "Make ✓"
     
-    # Kiểm tra quyền ghi vào install directory
+    # Check write permission to install directory
     if [[ "$BUILD_ONLY" == "false" ]]; then
         if [[ ! -w "$INSTALL_DIR" ]] && [[ "$EUID" -ne 0 ]]; then
-            log_warning "Không có quyền ghi vào $INSTALL_DIR. Sẽ cần sudo."
+            log_warning "No write permission to $INSTALL_DIR. Will need sudo."
         fi
     fi
 }
 
-# Function để clone repository
+# Function to clone repository
 clone_repo() {
-    log "Cloning repository từ $REPO_URL..."
+    log "Cloning repository from $REPO_URL..."
     
-    # Tạo temp directory
+    # Create temp directory
     TEMP_DIR=$(mktemp -d)
     CLEANUP_TEMP=true
     
@@ -146,14 +146,14 @@ clone_repo() {
         exit 1
     fi
     
-    # Chuyển vào thư mục source
+    # Change to source directory
     cd "$TEMP_DIR"
     SCRIPT_DIR="$TEMP_DIR"
     
     log_success "Repository cloned successfully"
 }
 
-# Function để cleanup
+# Function to cleanup
 cleanup() {
     if [[ "$CLEANUP_TEMP" == "true" ]] && [[ -n "$TEMP_DIR" ]] && [[ -d "$TEMP_DIR" ]]; then
         log "Cleaning up temporary directory..."
@@ -161,13 +161,13 @@ cleanup() {
     fi
 }
 
-# Function để build tools
+# Function to build tools
 build_tools() {
     log "Building kube tools..."
     
     cd "$SCRIPT_DIR"
     
-    # Clean trước khi build
+    # Clean before build
     if ! make clean; then
         log_error "Failed to clean build artifacts"
         exit 1
@@ -179,7 +179,7 @@ build_tools() {
         exit 1
     fi
     
-    # Build tất cả tools
+    # Build all tools
     if ! make build-all; then
         log_error "Failed to build tools"
         exit 1
@@ -188,26 +188,26 @@ build_tools() {
     log_success "Build completed successfully"
 }
 
-# Function để cài đặt tools
+# Function to install tools
 install_tools() {
     log "Installing tools to $INSTALL_DIR..."
     
     cd "$SCRIPT_DIR"
     
-    # Danh sách tools
-    TOOLS=("kube" "kube-pods" "kube-services" "kube-switch-context" "kube-switch-namespace" "kube-logs" "kube-port-forward" "kube-exec")
+    # List of tools
+    TOOLS=("kube" "kube-pods" "kube-services" "kube-switch-context" "kube-switch-namespace" "kube-logs" "kube-port-forward" "kube-exec" "kube-deploy" "kube-rollout")
     
     for tool in "${TOOLS[@]}"; do
         if [[ ! -f "$tool" ]]; then
-            log_error "Binary $tool không tồn tại. Vui lòng build trước."
+            log_error "Binary $tool does not exist. Please build first."
             exit 1
         fi
         
         target="$INSTALL_DIR/$tool"
         
-        # Kiểm tra file đã tồn tại
+        # Check if file already exists
         if [[ -f "$target" ]] && [[ "$FORCE" == "false" ]]; then
-            log_warning "$tool đã tồn tại trong $INSTALL_DIR. Sử dụng --force để ghi đè."
+            log_warning "$tool already exists in $INSTALL_DIR. Use --force to overwrite."
             continue
         fi
         
@@ -226,11 +226,11 @@ install_tools() {
     log_success "All tools installed successfully to $INSTALL_DIR"
 }
 
-# Function để uninstall tools
+# Function to uninstall tools
 uninstall_tools() {
     log "Uninstalling kube tools from $INSTALL_DIR..."
     
-    TOOLS=("kube" "kube-pods" "kube-services" "kube-switch-context" "kube-switch-namespace" "kube-logs" "kube-port-forward" "kube-exec")
+    TOOLS=("kube" "kube-pods" "kube-services" "kube-switch-context" "kube-switch-namespace" "kube-logs" "kube-port-forward" "kube-exec" "kube-deploy" "kube-rollout")
     
     for tool in "${TOOLS[@]}"; do
         target="$INSTALL_DIR/$tool"
@@ -250,11 +250,11 @@ uninstall_tools() {
     log_success "All tools uninstalled successfully"
 }
 
-# Function để verify installation
+# Function to verify installation
 verify_installation() {
     log "Verifying installation..."
     
-    TOOLS=("kube" "kube-pods" "kube-services" "kube-switch-context" "kube-switch-namespace" "kube-logs" "kube-port-forward" "kube-exec")
+    TOOLS=("kube" "kube-pods" "kube-services" "kube-switch-context" "kube-switch-namespace" "kube-logs" "kube-port-forward" "kube-exec" "kube-deploy" "kube-rollout")
     
     missing_tools=()
     for tool in "${TOOLS[@]}"; do
@@ -278,7 +278,7 @@ main() {
     local uninstall=false
     local need_clone=true
     
-    # Convert environment variables từ string thành boolean
+    # Convert environment variables from string to boolean
     if [[ "$BUILD_ONLY" == "true" ]] || [[ "$BUILD_ONLY" == "1" ]]; then
         BUILD_ONLY=true
     else
@@ -297,9 +297,9 @@ main() {
         QUIET=false
     fi
     
-    # Kiểm tra xem đã ở trong repo chưa
+    # Check if already in repo
     if [[ -f "go.mod" ]] && [[ -f "Makefile" ]] && [[ -d "tools" ]]; then
-        log "Đã ở trong thư mục source code, bỏ qua clone."
+        log "Already in source code directory, skipping clone."
         need_clone=false
     fi
     
@@ -363,7 +363,7 @@ main() {
     # Normal installation flow
     check_requirements
     
-    # Clone repository nếu cần
+    # Clone repository if needed
     if [[ "$need_clone" == "true" ]]; then
         clone_repo
         # Set cleanup trap

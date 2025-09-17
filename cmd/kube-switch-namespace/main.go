@@ -11,23 +11,23 @@ import (
 	"k8s.io/client-go/util/homedir"
 )
 
-// rootCmd đại diện cho kube-switch-namespace command
-var rootCmd = &cobra.Command{
+// switchNamespaceRootCmd represents the kube-switch-namespace command
+var switchNamespaceRootCmd = &cobra.Command{
 	Use:   "kube-switch-namespace [namespace-name]",
-	Short: "Chuyển đổi namespace",
-	Long: `kube-switch-namespace cho phép chuyển đổi namespace trong context hiện tại.
+	Short: "Switch namespace",
+	Long: `kube-switch-namespace allows switching namespace in the current context.
 	
-Nếu không có tên namespace, hiển thị namespace hiện tại.
+If no namespace name is provided, displays current namespace.
 	
-Ví dụ:
-  kube-switch-namespace                  # Hiển thị namespace hiện tại
-  kube-switch-namespace my-app           # Chuyển sang namespace my-app`,
+Examples:
+  kube-switch-namespace                  # Display current namespace
+  kube-switch-namespace my-app           # Switch to namespace my-app`,
 	RunE: runSwitchNamespace,
 }
 
-// runSwitchNamespace thực thi logic chuyển đổi namespace
+// runSwitchNamespace executes the namespace switching logic
 func runSwitchNamespace(cmd *cobra.Command, args []string) error {
-	kubeconfig := getKubeconfigPath()
+	kubeconfig := switchNamespaceGetKubeconfigPath()
 
 	// Load kubeconfig
 	config, err := clientcmd.LoadFromFile(kubeconfig)
@@ -45,7 +45,7 @@ func runSwitchNamespace(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("current context '%s' not found", currentContext)
 	}
 
-	// Nếu không có argument, hiển thị namespace hiện tại
+	// If no argument, display current namespace
 	if len(args) == 0 {
 		currentNamespace := context.Namespace
 		if currentNamespace == "" {
@@ -57,11 +57,11 @@ func runSwitchNamespace(cmd *cobra.Command, args []string) error {
 
 	namespaceName := args[0]
 
-	// Cập nhật namespace trong context
+	// Update namespace in context
 	context.Namespace = namespaceName
 	config.Contexts[currentContext] = context
 
-	// Lưu cấu hình
+	// Save configuration
 	err = clientcmd.WriteToFile(*config, kubeconfig)
 	if err != nil {
 		return fmt.Errorf("failed to save kubeconfig: %w", err)
@@ -71,14 +71,14 @@ func runSwitchNamespace(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
-// getKubeconfigPath trả về đường dẫn đến kubeconfig file
-func getKubeconfigPath() string {
-	// Kiểm tra biến môi trường KUBECONFIG
+// switchNamespaceGetKubeconfigPath returns path to kubeconfig file
+func switchNamespaceGetKubeconfigPath() string {
+	// Check KUBECONFIG environment variable
 	if kubeconfig := os.Getenv("KUBECONFIG"); kubeconfig != "" {
 		return kubeconfig
 	}
 
-	// Sử dụng đường dẫn mặc định
+	// Use default path
 	if home := homedir.HomeDir(); home != "" {
 		return filepath.Join(home, ".kube", "config")
 	}
@@ -86,9 +86,9 @@ func getKubeconfigPath() string {
 	return ""
 }
 
-// main là entry point của kube-switch-namespace
+// main is the entry point of kube-switch-namespace
 func main() {
-	if err := rootCmd.Execute(); err != nil {
+	if err := switchNamespaceRootCmd.Execute(); err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 		os.Exit(1)
 	}

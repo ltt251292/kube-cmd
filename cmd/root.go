@@ -11,93 +11,97 @@ import (
 
 var cfgFile string
 
-// rootCmd đại diện cho base command khi được gọi mà không có subcommands
+// rootCmd is the base command when called without subcommands
 var rootCmd = &cobra.Command{
 	Use:   "kube",
 	Short: "Kubernetes CLI helper tools",
-	Long: `kube là một collection các tools để làm việc với Kubernetes cluster.
+	Long: `kube is a collection of small helper tools to work with your Kubernetes clusters.
 
-Các tools có sẵn:
-  kube-pods              Xem danh sách pods
-  kube-services          Xem danh sách services  
-  kube-switch-context    Chuyển đổi Kubernetes context
-  kube-switch-namespace  Chuyển đổi namespace
-  kube-logs              Xem logs của pods
-  kube-port-forward      Port forwarding đến pods
-  kube-exec              Thực thi commands trong pods
+Available tools:
+  kube-pods              List pods
+  kube-services          List services  
+  kube-switch-context    Switch Kubernetes context
+  kube-switch-namespace  Switch namespace
+  kube-logs              Show pod logs
+  kube-port-forward      Port forward to pods/services
+  kube-exec              Execute commands in pods
+  kube-deploy            Update Deployment image and wait for rollout
+  kube-rollout           Restart or show rollout status for a Deployment
 
-Sử dụng các tools riêng lẻ hoặc cài đặt tất cả với 'make install-all'.`,
+Use tools individually, or install all with 'make install-all'.`,
 	RunE: listTools,
 }
 
-// Execute thêm tất cả child commands vào root command và set flags một cách phù hợp.
-// Đây là function được gọi bởi main.main(). Nó chỉ cần xảy ra một lần với rootCmd.
+// Execute adds all child commands to the root command and sets flags appropriately.
+// This is called by main.main(). It only needs to happen once to the rootCmd.
 func Execute() error {
 	return rootCmd.Execute()
 }
 
-// init khởi tạo cấu hình cho root command
+// init initializes configuration for the root command
 func init() {
 	cobra.OnInitialize(initConfig)
 
-	// Định nghĩa flags và configuration settings
+	// Define flags and configuration settings
 	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.kube.yaml)")
 	rootCmd.PersistentFlags().StringP("namespace", "n", "", "Kubernetes namespace to use")
 	rootCmd.PersistentFlags().StringP("context", "c", "", "Kubernetes context to use")
 
-	// Bind flags với viper
+	// Bind flags with viper
 	viper.BindPFlag("namespace", rootCmd.PersistentFlags().Lookup("namespace"))
 	viper.BindPFlag("context", rootCmd.PersistentFlags().Lookup("context"))
 }
 
-// initConfig đọc config file và ENV variables nếu được set
+// initConfig reads config file and environment variables if set
 func initConfig() {
 	if cfgFile != "" {
-		// Sử dụng config file từ flag
+		// Use config file from flag
 		viper.SetConfigFile(cfgFile)
 	} else {
-		// Tìm home directory
+		// Find home directory
 		home, err := os.UserHomeDir()
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Error getting home directory: %v\n", err)
 			os.Exit(1)
 		}
 
-		// Tìm config trong home directory với tên ".kube" (không có extension)
+		// Look for config in home directory with name ".kube" (no extension)
 		viper.AddConfigPath(home)
 		viper.SetConfigType("yaml")
 		viper.SetConfigName(".kube")
 	}
 
-	viper.AutomaticEnv() // đọc các biến môi trường khớp với KUBE_*
+	viper.AutomaticEnv() // read env variables
 
-	// Nếu tìm thấy config file, đọc nó
+	// If a config file is found, read it
 	if err := viper.ReadInConfig(); err == nil {
 		fmt.Fprintln(os.Stderr, "Using config file:", viper.ConfigFileUsed())
 	}
 }
 
-// listTools hiển thị danh sách các kube-* tools có sẵn
+// listTools prints the list of available kube-* tools
 func listTools(cmd *cobra.Command, args []string) error {
-	// Danh sách tools được hỗ trợ
+	// Supported tools
 	tools := []struct {
 		name        string
 		description string
 	}{
-		{"kube-pods", "Xem danh sách pods"},
-		{"kube-services", "Xem danh sách services"},
-		{"kube-switch-context", "Chuyển đổi Kubernetes context"},
-		{"kube-switch-namespace", "Chuyển đổi namespace"},
-		{"kube-logs", "Xem logs của pods"},
-		{"kube-port-forward", "Port forwarding đến pods"},
-		{"kube-exec", "Thực thi commands trong pods"},
+		{"kube-pods", "List pods"},
+		{"kube-services", "List services"},
+		{"kube-switch-context", "Switch Kubernetes context"},
+		{"kube-switch-namespace", "Switch namespace"},
+		{"kube-logs", "Show pod logs"},
+		{"kube-port-forward", "Port forward to pods/services"},
+		{"kube-exec", "Execute commands in pods"},
+		{"kube-deploy", "Update image and wait for rollout"},
+		{"kube-rollout", "Restart or show rollout status"},
 	}
 
 	fmt.Println("Kubernetes CLI Helper Tools")
 	fmt.Println("===========================")
 	fmt.Println()
 
-	// Kiểm tra tools nào đã được cài đặt
+	// Check which tools are installed
 	fmt.Println("Available tools:")
 	for _, tool := range tools {
 		status := "❌ Not installed"
@@ -118,7 +122,7 @@ func listTools(cmd *cobra.Command, args []string) error {
 	fmt.Println("  kube-services -A                       # List services in all namespaces")
 	fmt.Println("  kube-switch-context production         # Switch to production context")
 	fmt.Println("  kube-logs my-pod -f                    # Follow logs")
-	fmt.Println("  kube-port-forward my-pod 8080:80       # Port forward")
+	fmt.Println("  kube-port-forward svc/my-svc 8080:80   # Port forward to service")
 	fmt.Println("  kube-exec my-pod -- bash               # Exec into pod")
 
 	return nil
