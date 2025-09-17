@@ -195,7 +195,7 @@ install_tools() {
     cd "$SCRIPT_DIR"
     
     # List of tools
-    TOOLS=("kube" "kube-pods" "kube-services" "kube-switch-context" "kube-switch-namespace" "kube-logs" "kube-port-forward" "kube-exec")
+    TOOLS=("kube" "kube-pods" "kube-services" "kube-switch-context" "kube-switch-namespace" "kube-logs" "kube-port-forward" "kube-exec" "kube-deploy" "kube-rollout")
     
     for tool in "${TOOLS[@]}"; do
         if [[ ! -f "$tool" ]]; then
@@ -230,7 +230,7 @@ install_tools() {
 uninstall_tools() {
     log "Uninstalling kube tools from $INSTALL_DIR..."
     
-    TOOLS=("kube" "kube-pods" "kube-services" "kube-switch-context" "kube-switch-namespace" "kube-logs" "kube-port-forward" "kube-exec")
+    TOOLS=("kube" "kube-pods" "kube-services" "kube-switch-context" "kube-switch-namespace" "kube-logs" "kube-port-forward" "kube-exec" "kube-deploy" "kube-rollout")
     
     for tool in "${TOOLS[@]}"; do
         target="$INSTALL_DIR/$tool"
@@ -254,7 +254,7 @@ uninstall_tools() {
 verify_installation() {
     log "Verifying installation..."
     
-    TOOLS=("kube" "kube-pods" "kube-services" "kube-switch-context" "kube-switch-namespace" "kube-logs" "kube-port-forward" "kube-exec")
+    TOOLS=("kube" "kube-pods" "kube-services" "kube-switch-context" "kube-switch-namespace" "kube-logs" "kube-port-forward" "kube-exec" "kube-deploy" "kube-rollout")
     
     missing_tools=()
     for tool in "${TOOLS[@]}"; do
