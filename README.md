@@ -86,6 +86,121 @@ sudo make install-all
 - Git
 - Make
 
+### OS-specific dependency installation
+
+To build from source you need: Git, Go (>= 1.21), Make. Below are quick setup instructions per operating system.
+
+#### macOS (Homebrew)
+
+```bash
+# Install Homebrew if missing (see https://brew.sh)
+# /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+
+brew update
+brew install git go make
+
+# (Optional) Install kubectl if needed
+brew install kubectl
+
+# Verify versions
+git --version
+go version   # ensure >= 1.21
+make --version
+```
+
+Note: If not using Homebrew, you can install Xcode Command Line Tools to get `git` and `make`:
+
+```bash
+xcode-select --install
+```
+
+#### Debian/Ubuntu
+
+```bash
+sudo apt-get update -y
+sudo apt-get install -y git make
+
+# Install Go >= 1.21:
+# Option 1 (recommended): download from the official site for the latest version
+GO_VERSION=1.22.6
+curl -fsSL https://go.dev/dl/go${GO_VERSION}.linux-amd64.tar.gz -o /tmp/go.tgz
+sudo rm -rf /usr/local/go && sudo tar -C /usr/local -xzf /tmp/go.tgz
+echo 'export PATH="/usr/local/go/bin:$PATH"' >> ~/.bashrc
+source ~/.bashrc
+
+# Option 2 (via apt - may not be the newest):
+# sudo apt-get install -y golang
+
+# (Optional) kubectl
+sudo apt-get install -y kubectl || true
+
+# Verify
+git --version
+go version
+make --version
+```
+
+#### RHEL/CentOS/Fedora
+
+```bash
+# Git and make
+sudo dnf install -y git make || sudo yum install -y git make
+
+# Go >= 1.21 (recommended: download from official site)
+GO_VERSION=1.22.6
+curl -fsSL https://go.dev/dl/go${GO_VERSION}.linux-amd64.tar.gz -o /tmp/go.tgz
+sudo rm -rf /usr/local/go && sudo tar -C /usr/local -xzf /tmp/go.tgz
+echo 'export PATH="/usr/local/go/bin:$PATH"' >> ~/.bashrc
+source ~/.bashrc
+
+# (Optional) kubectl
+sudo dnf install -y kubectl || sudo yum install -y kubectl || true
+
+# Verify
+git --version
+go version
+make --version
+```
+
+#### Arch Linux
+
+```bash
+sudo pacman -Sy --noconfirm git go base-devel
+
+# (Optional) kubectl
+sudo pacman -Sy --noconfirm kubectl || true
+
+# Verify
+git --version
+go version
+make --version
+```
+
+#### openSUSE
+
+```bash
+sudo zypper refresh
+sudo zypper install -y git make go
+
+# (Optional) kubectl
+sudo zypper install -y kubectl || true
+
+# Verify
+git --version
+go version
+make --version
+```
+
+#### Windows (WSL recommended)
+
+We recommend using WSL (Ubuntu) and following the Debian/Ubuntu instructions above. If using native Windows, please install:
+
+- Git for Windows
+- Go 1.21+ (installer from go.dev)
+- Make (GNUWin32 make or `choco install make`)
+
+After installation, ensure `go`, `git`, and `make` are in your PATH and meet the required versions.
+
 ## Usage
 
 ### Show tools
