@@ -38,13 +38,21 @@ Examples:
 }
 
 // runExec executes the exec command logic
+// It uses Cobra's ArgsLenAtDash to split arguments at "--":
+//   - args[:dash] are positional args before "--" (expects: pod name)
+//   - args[dash+1:] are the command and its arguments to run inside the pod
 func runExec(cmd *cobra.Command, args []string) error {
-	if len(args) < 3 || args[1] != "--" {
+	dashIndex := cmd.ArgsLenAtDash()
+
+	if dashIndex == -1 {
 		return fmt.Errorf("invalid syntax. Use: kube-exec [pod-name] -- [command...]")
+	}
+	if dashIndex < 1 {
+		return fmt.Errorf("pod name is required before --")
 	}
 
 	podName := args[0]
-	command := args[2:]
+	command := args[dashIndex:]
 
 	client, err := k8s.NewClient("", execKubeContext)
 	if err != nil {
